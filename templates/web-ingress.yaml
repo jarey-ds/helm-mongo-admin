@@ -1,0 +1,44 @@
+{{- if .Values.ingress.web.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-web-ingress
+  labels:
+    {{- include "web-labels" . | indent 4 }}
+  {{- with .Values.ingress.web.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.web.ingressClassName }}
+  ingressClassName: {{ .Values.ingress.web.ingressClassName }}
+  {{- end }}
+  {{- if .Values.ingress.web.tls }}
+  tls:
+    {{- range .Values.ingress.web.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- if .secretName }}
+      secretName: {{ .secretName }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.web.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $.Release.Name }}-web-svc
+                port:
+                  number: {{ $.Values.service.web.ports.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+

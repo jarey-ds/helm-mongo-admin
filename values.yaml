@@ -54,6 +54,36 @@ service:
       targetPort: 8081
       nodePort: 30111
 
+ingress:
+  web:
+    enabled: true
+    ingressClassName: nginx  # Default to nginx, can be changed to other ingress controllers
+    annotations:
+      # nginx ingress controller annotations
+      # Do NOT use rewrite-target as it interferes with OIDC callback paths
+      # Proxy settings for proper backend communication and OIDC callbacks
+      nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+      nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+      # Increase buffer sizes to handle OIDC responses
+      nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+      nginx.ingress.kubernetes.io/proxy-buffers-number: "8"
+      # Preserve original request headers and query parameters for OIDC callbacks
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      # Ensure query parameters are preserved
+      nginx.ingress.kubernetes.io/use-regex: "false"
+    hosts:
+      - host: mongo-express.local
+        paths:
+          - path: /
+            pathType: Prefix
+    # TLS configuration (optional)
+    tls: []
+      # - secretName: mongo-express-tls
+      #   hosts:
+      #     - mongo-express.local
+
 secret:
   type: Opaque
   username: user101
@@ -64,26 +94,38 @@ web:
     type: Opaque
     mongodbAdminUsername: user101
     mongodbAdminPassword: pass101
-    # Basic authentication for mongo-express UI (enabled for testing)
-    basicAuthUsername: admin
-    basicAuthPassword: admin123
     # Session and cookie secrets (required for mongo-express sessions)
+    # These are needed regardless of authentication method (basic auth or OIDC)
     sessionSecret: "my-session-secret-key-change-in-production"
     cookieSecret: "my-cookie-secret-key-change-in-production"
+  # Basic authentication configuration
+  # Note: Basic auth is automatically disabled when OIDC is enabled
+  # Set enabled: true only if you want basic auth without OIDC
+  basicAuth:
+    enabled: false  # Set to true to enable basic auth (will be disabled if OIDC is enabled)
+    username: admin
+    password: admin123
   oidc:
-    enabled: false
-    # OAuth2 Issuer URL (root URL to the openidconnect metadata)
-    # Example: "https://accounts.google.com" or "https://login.microsoftonline.com/{tenant-id}"
-    issuer: ""
-    # OAuth2 ClientId (the client must be private and allowed to perform Authorization Code Flow)
-    clientId: ""
-    # OAuth2 Client Secret (stored in secret)
-    clientSecret: ""
+    enabled: true
+    # Keycloak OAuth2 Issuer URL (full path to openid-configuration)
+    # Format: https://keycloak-host/realms/{realm-name}/.well-known/openid-configuration
+    issuer: "https://keycloak.local/realms/master/.well-known/openid-configuration"
+    # Allow self-signed certificates (for development/testing only)
+    # Set to true if Keycloak uses self-signed certificates
+    allowInsecureCertificates: true
+    # OAuth2 ClientId configured in Keycloak
+    clientId: "mongoexpress"
+    # OAuth2 Client Secret from Keycloak (stored in secret)
+    clientSecret: "J0CJupr908vWJcnSQtmg9RDRfjzQUe5c"
     # Random secret used by the library to init the Authorization Code Flow (stored in secret)
-    secret: ""
-    # OAuth2 base url for redirect URL (optional, uses ME_CONFIG_SITE_BASEURL if not specified)
-    # Example: "https://mongo-express.example.com"
-    baseUrl: ""
+    # Generate a secure random string for production use
+    secret: "mongo-express-oidc-secret-key-change-in-production-2024"
+    # OAuth2 base url for redirect URL (REQUIRED for OIDC)
+    # This is the public URL where mongo-express is accessible
+    # For Ingress (recommended): http://mongo-express.local or https://mongo-express.local
+    # For NodePort service: http://<node-ip>:30111
+    # For minikube with ingress: http://mongo-express.local (add to /etc/hosts: <ingress-ip> mongo-express.local)
+    baseUrl: "http://mongo-express.local"  # Update with your actual URL (use ingress hostname if ingress is enabled)
 
 persistentVolume:
   accessModes: ReadWriteMany

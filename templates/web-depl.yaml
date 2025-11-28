@@ -37,23 +37,27 @@ spec:
               configMapKeyRef:
                 name: {{ .Release.Name }}-db-config
                 key: url
-{{- if .Values.web.secret.basicAuthUsername }}
+{{- if .Values.db.enabled }}
+          # ME_CONFIG_MONGODB_URL overrides the hardcoded default "mongodb://mongo:27017" in mongo-express image
+          - name: ME_CONFIG_MONGODB_URL
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-db-config
+                key: connectionUrl
+{{- end }}
+{{- if and .Values.web.basicAuth.enabled (not .Values.web.oidc.enabled) }}
+          - name: ME_CONFIG_BASICAUTH_ENABLED
+            value: "true"
           - name: ME_CONFIG_BASICAUTH_USERNAME
             valueFrom:
               secretKeyRef:
                 name: {{ .Release.Name }}-web-secrets
                 key: basicAuthUsername
-{{- end }}
-{{- if .Values.web.secret.basicAuthPassword }}
           - name: ME_CONFIG_BASICAUTH_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: {{ .Release.Name }}-web-secrets
                 key: basicAuthPassword
-{{- end }}
-{{- if .Values.web.secret.basicAuthUsername }}
-          - name: ME_CONFIG_BASICAUTH_ENABLED
-            value: "true"
 {{- end }}
 {{- if .Values.web.secret.sessionSecret }}
           - name: ME_CONFIG_SITE_SESSIONSECRET
@@ -94,8 +98,17 @@ spec:
                 name: {{ .Release.Name }}-web-secrets
                 key: oidcSecret
 {{- end }}
-{{- if .Values.web.oidc.baseUrl }}
           - name: ME_CONFIG_OIDCAUTH_BASEURL
-            value: {{ .Values.web.oidc.baseUrl | quote }}
+            value: {{ .Values.web.oidc.baseUrl | default "http://localhost:30111" | quote }}
+          # Set base URL path for mongo-express (should be "/" for root, or a path like "/mongo-express")
+          # This is used as a path prefix for routes, NOT a full URL
+          # The OIDC library uses ME_CONFIG_OIDCAUTH_BASEURL for the full callback URL
+          - name: ME_CONFIG_SITE_BASEURL
+            value: "/"
+{{- if .Values.web.oidc.allowInsecureCertificates }}
+          # Disable SSL certificate verification for self-signed certificates (development only)
+          # WARNING: This should be set to false in production with proper certificates
+          - name: NODE_TLS_REJECT_UNAUTHORIZED
+            value: "0"
 {{- end }}
 {{- end }}

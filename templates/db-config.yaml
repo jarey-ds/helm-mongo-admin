@@ -5,4 +5,7 @@ metadata:
   name: {{ .Release.Name }}-db-config
 data:
   url: {{ .Release.Name }}-db-svc
+  # Full MongoDB connection URL to override mongo-express hardcoded default
+  # Format: mongodb://username:password@host:port/
+  connectionUrl: "mongodb://{{ .Values.web.secret.mongodbAdminUsername }}:{{ .Values.web.secret.mongodbAdminPassword }}@{{ .Release.Name }}-db-svc:27017/"
 {{- end }}
