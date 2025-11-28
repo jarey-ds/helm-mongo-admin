@@ -1,3 +1,4 @@
+{{- if .Values.db.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -38,3 +39,4 @@ spec:
       - name: {{ .Values.deployments.database.volume.name }}
         persistentVolumeClaim:
           claimName: {{ .Release.Name }}-db-pvc
+{{- end }}

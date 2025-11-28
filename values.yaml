@@ -1,3 +1,6 @@
+db:
+  enabled: true
+
 deployments:
   database:
     replicaCount: 1
