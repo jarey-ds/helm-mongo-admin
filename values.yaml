@@ -30,6 +30,7 @@ deployments:
         image:
           repository: mongo-express
           tag: latest
+          pullPolicy: Never  # Default to Never if not specified
         ports:
           containerPort: 8081
         env:
@@ -57,6 +58,32 @@ secret:
   type: Opaque
   username: user101
   password: pass101
+
+web:
+  secret:
+    type: Opaque
+    mongodbAdminUsername: user101
+    mongodbAdminPassword: pass101
+    # Basic authentication for mongo-express UI (enabled for testing)
+    basicAuthUsername: admin
+    basicAuthPassword: admin123
+    # Session and cookie secrets (required for mongo-express sessions)
+    sessionSecret: "my-session-secret-key-change-in-production"
+    cookieSecret: "my-cookie-secret-key-change-in-production"
+  oidc:
+    enabled: false
+    # OAuth2 Issuer URL (root URL to the openidconnect metadata)
+    # Example: "https://accounts.google.com" or "https://login.microsoftonline.com/{tenant-id}"
+    issuer: ""
+    # OAuth2 ClientId (the client must be private and allowed to perform Authorization Code Flow)
+    clientId: ""
+    # OAuth2 Client Secret (stored in secret)
+    clientSecret: ""
+    # Random secret used by the library to init the Authorization Code Flow (stored in secret)
+    secret: ""
+    # OAuth2 base url for redirect URL (optional, uses ME_CONFIG_SITE_BASEURL if not specified)
+    # Example: "https://mongo-express.example.com"
+    baseUrl: ""
 
 persistentVolume:
   accessModes: ReadWriteMany

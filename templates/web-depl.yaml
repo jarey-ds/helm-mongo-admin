@@ -18,21 +18,84 @@ spec:
       containers:
       - name: {{ .Values.deployments.web.pod.container.name }}
         image: {{ .Values.deployments.web.pod.container.image.repository }}:{{ .Values.deployments.web.pod.container.image.tag }}
+        imagePullPolicy: {{ .Values.deployments.web.pod.container.image.pullPolicy | default "Never" }}
         ports:
         - containerPort: {{ .Values.deployments.web.pod.container.ports.containerPort }}
         env:
           - name: {{ .Values.deployments.web.pod.container.env.username }}
             valueFrom:
               secretKeyRef:
-                name: {{ .Release.Name }}-db-secrets
-                key: username
+                name: {{ .Release.Name }}-web-secrets
+                key: mongodbAdminUsername
           - name: {{ .Values.deployments.web.pod.container.env.password }}
             valueFrom:
               secretKeyRef:
-                name: {{ .Release.Name }}-db-secrets
-                key: password
+                name: {{ .Release.Name }}-web-secrets
+                key: mongodbAdminPassword
           - name: {{ .Values.deployments.web.pod.container.env.server }}
             valueFrom:
               configMapKeyRef:
                 name: {{ .Release.Name }}-db-config
                 key: url
+{{- if .Values.web.secret.basicAuthUsername }}
+          - name: ME_CONFIG_BASICAUTH_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-web-secrets
+                key: basicAuthUsername
+{{- end }}
+{{- if .Values.web.secret.basicAuthPassword }}
+          - name: ME_CONFIG_BASICAUTH_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-web-secrets
+                key: basicAuthPassword
+{{- end }}
+{{- if .Values.web.secret.basicAuthUsername }}
+          - name: ME_CONFIG_BASICAUTH_ENABLED
+            value: "true"
+{{- end }}
+{{- if .Values.web.secret.sessionSecret }}
+          - name: ME_CONFIG_SITE_SESSIONSECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-web-secrets
+                key: sessionSecret
+{{- end }}
+{{- if .Values.web.secret.cookieSecret }}
+          - name: ME_CONFIG_SITE_COOKIESECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-web-secrets
+                key: cookieSecret
+{{- end }}
+{{- if .Values.web.oidc.enabled }}
+          - name: ME_CONFIG_OIDCAUTH_ENABLED
+            value: "true"
+{{- if .Values.web.oidc.issuer }}
+          - name: ME_CONFIG_OIDCAUTH_ISSUER
+            value: {{ .Values.web.oidc.issuer | quote }}
+{{- end }}
+{{- if .Values.web.oidc.clientId }}
+          - name: ME_CONFIG_OIDCAUTH_CLIENTID
+            value: {{ .Values.web.oidc.clientId | quote }}
+{{- end }}
+{{- if .Values.web.oidc.clientSecret }}
+          - name: ME_CONFIG_OIDCAUTH_CLIENTSECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-web-secrets
+                key: oidcClientSecret
+{{- end }}
+{{- if .Values.web.oidc.secret }}
+          - name: ME_CONFIG_OIDCAUTH_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-web-secrets
+                key: oidcSecret
+{{- end }}
+{{- if .Values.web.oidc.baseUrl }}
+          - name: ME_CONFIG_OIDCAUTH_BASEURL
+            value: {{ .Values.web.oidc.baseUrl | quote }}
+{{- end }}
+{{- end }}
