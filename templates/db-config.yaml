@@ -4,8 +4,13 @@ kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-db-config
 data:
-  url: {{ .Release.Name }}-db-svc
+  # MongoDBCommunity operator creates a service with pattern: <resource-name>-svc
+  url: {{ .Values.db.mongodbCommunity.name }}-svc
   # Full MongoDB connection URL to override mongo-express hardcoded default
-  # Format: mongodb://username:password@host:port/
-  connectionUrl: "mongodb://{{ .Values.web.secret.mongodbAdminUsername }}:{{ .Values.web.secret.mongodbAdminPassword }}@{{ .Release.Name }}-db-svc:27017/"
+  # Format: mongodb://username:password@host:port/database?authSource=admin&authMechanism=SCRAM-SHA-256
+  # Using the first user from MongoDBCommunity users configuration
+  # The database name in the path (after the port) sets the default database for operations
+  # authSource is set to the user's database (admin) for SCRAM authentication
+  # authMechanism explicitly specifies which SCRAM algorithm to use (SCRAM-SHA-256 or SCRAM-SHA-1)
+  connectionUrl: "mongodb://{{ (index .Values.db.mongodbCommunity.users 0).name }}:{{ .Values.secret.password }}@{{ .Values.db.mongodbCommunity.name }}-svc:27017/{{ (index .Values.db.mongodbCommunity.users 0).db }}?authSource={{ (index .Values.db.mongodbCommunity.users 0).db }}&authMechanism={{ .Values.db.mongodbCommunity.authMechanism }}"
 {{- end }}

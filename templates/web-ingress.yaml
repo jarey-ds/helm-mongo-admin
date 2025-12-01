@@ -1,4 +1,4 @@
-{{- if .Values.ingress.web.enabled }}
+{{- if and .Values.web.enabled .Values.ingress.web.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

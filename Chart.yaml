@@ -16,3 +16,8 @@ maintainers:
     url: 
 icon: https://hub.docker.com/api/media/repos_logo/v1/library%2Fmongo-express
 appVersion: 1.0.2
+dependencies:
+- name: community-operator
+  version: 0.13.0
+  repository: https://mongodb.github.io/helm-charts
+  condition: community-operator.enabled

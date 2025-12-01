@@ -1,26 +1,54 @@
+# MongoDB Community Operator configuration
+# Set to true only if you want this chart to install the operator as a dependency
+# Set to false if the operator is already installed in your cluster (recommended)
+# The MongoDBCommunity CRD will work as long as the operator is present in the cluster
+community-operator:
+  enabled: false
+
+# MongoDB database deployment configuration
 db:
   enabled: true
+  # MongoDBCommunity CRD configuration (used when db.enabled is true)
+  mongodbCommunity:
+    # Name of the MongoDBCommunity resource
+    name: mongodb
+    # Number of members in the replica set
+    members: 3
+    # Type of deployment
+    type: ReplicaSet
+    # MongoDB version
+    version: "6.0.5"
+    # Security configuration
+    security:
+      authentication:
+        modes: ["SCRAM"]  # Supports both SCRAM-SHA-1 and SCRAM-SHA-256
+    # MongoDB connection authentication mechanism
+    # Options: SCRAM-SHA-256 (recommended, default for MongoDB 4.0+), SCRAM-SHA-1 (legacy)
+    authMechanism: "SCRAM-SHA-256"
+    # MongoDB users configuration
+    users:
+      - name: admin-user
+        db: admin
+        # Reference to the secret containing the user's password
+        passwordSecretRef:
+          name: mongodb-admin-password
+        roles:
+          - name: clusterAdmin
+            db: admin
+          - name: userAdminAnyDatabase
+            db: admin
+          - name: readAnyDatabase
+            db: admin
+          - name: readWriteAnyDatabase
+            db: admin
+        # Name of the secret that will store SCRAM credentials
+        scramCredentialsSecretName: mongodb-admin-scram
+    # Additional MongoDB configuration
+    additionalMongodConfig:
+      storage.wiredTiger.engineConfig.journalCompressor: zlib
 
+# Mongo Express (web UI) deployment configuration
 deployments:
-  database:
-    replicaCount: 1
-    pod:
-      name: db-pod
-      container:
-        name: db-container
-        image:
-          repository: mongo
-          tag: "5.0"
-        ports:
-          containerPort: 27017
-        volumeMounts:
-          mountPath: /data/db
-        env:
-          username: MONGO_INITDB_ROOT_USERNAME
-          password: MONGO_INITDB_ROOT_PASSWORD
-    volume:
-      name: mongo-db-volume
-
   web:
     replicaCount: 1
     pod:
@@ -41,13 +69,6 @@ deployments:
           password: ME_CONFIG_MONGODB_ADMINPASSWORD
 
 service:
-  db:
-    type: ClusterIP
-    ports:
-      protocol: TCP
-      port: 27017
-      targetPort: 27017
-  
   web:
     type: NodePort
     ports:
@@ -86,14 +107,23 @@ ingress:
       #   hosts:
       #     - mongo-express.local
 
+# MongoDB database credentials
+# When db.enabled is true: These credentials are used for BOTH MongoDBCommunity user AND mongo-express
+#   - The MongoDBCommunity user is created with: db.mongodbCommunity.users[0].name and secret.password
+#   - mongo-express uses the same credentials automatically
+# When db.enabled is false: Use web.secret.mongodbAdminUsername/Password to connect to external MongoDB
 secret:
   type: Opaque
-  username: user101
-  password: pass101
+  username: user101  # Not used when db.enabled is true (MongoDBCommunity user name is used instead)
+  password: pass101   # Used as MongoDBCommunity user password when db.enabled is true
 
 web:
+  enabled: true
   secret:
     type: Opaque
+    # MongoDB credentials for mongo-express
+    # When db.enabled is true: These are IGNORED - MongoDBCommunity user credentials are used instead
+    # When db.enabled is false: Use these to connect to an external MongoDB instance
     mongodbAdminUsername: user101
     mongodbAdminPassword: pass101
     # Session and cookie secrets (required for mongo-express sessions)
