@@ -30,6 +30,8 @@ deployments:
         image:
           repository: mongo-express
           tag: latest
+          #repository: mongo-express
+          #tag: cinfo
           pullPolicy: Never  # Default to Never if not specified
         ports:
           containerPort: 8081
