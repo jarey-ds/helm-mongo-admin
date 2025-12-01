@@ -1,2 +1,2 @@
-FROM mongo-express:1.0.2-20-alpine3.19
-RUN yarn add express-openid-connect && yarn install && yarn build
+FROM mongo-express:1.0.2-20-alpine3.19 #ultima imagen disponible en docker hub.
+RUN yarn add express-openid-connect && yarn install && yarn build #instalación de dependencia de cliente express para openid
