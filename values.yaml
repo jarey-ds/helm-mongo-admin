@@ -3,7 +3,7 @@
 # Set to false if the operator is already installed in your cluster (recommended)
 # The MongoDBCommunity CRD will work as long as the operator is present in the cluster
 community-operator:
-  enabled: false
+  enabled: true
 
 # MongoDB database deployment configuration
 db:

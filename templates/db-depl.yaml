@@ -1,4 +1,38 @@
 {{- if .Values.db.enabled }}
+{{- if (index (get .Values "community-operator") "enabled") }}
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: {{ .Values.db.mongodbCommunity.name }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  members: {{ .Values.db.mongodbCommunity.members }}
+  type: {{ .Values.db.mongodbCommunity.type }}
+  version: {{ .Values.db.mongodbCommunity.version | quote }}
+  security:
+    authentication:
+      modes: {{ .Values.db.mongodbCommunity.security.authentication.modes | toJson }}
+  users:
+    {{- range .Values.db.mongodbCommunity.users }}
+    - name: {{ .name }}
+      db: {{ .db }}
+      passwordSecretRef:
+        name: {{ .passwordSecretRef.name }}
+      roles:
+        {{- range .roles }}
+        - name: {{ .name }}
+          db: {{ .db }}
+        {{- end }}
+      scramCredentialsSecretName: {{ .scramCredentialsSecretName }}
+    {{- end }}
+  {{- if .Values.db.mongodbCommunity.additionalMongodConfig }}
+  additionalMongodConfig:
+    {{- toYaml .Values.db.mongodbCommunity.additionalMongodConfig | nindent 4 }}
+  {{- end }}
+{{- else }}
 apiVersion: mongodbcommunity.mongodb.com/v1
 kind: MongoDBCommunity
 metadata:
@@ -27,4 +61,5 @@ spec:
   additionalMongodConfig:
     {{- toYaml .Values.db.mongodbCommunity.additionalMongodConfig | nindent 4 }}
   {{- end }}
+{{- end }}
 {{- end }}

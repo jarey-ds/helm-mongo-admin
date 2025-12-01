@@ -1,0 +1,66 @@
+{{- if and .Values.db.enabled (index (get .Values "community-operator") "enabled") }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-wait-for-mongodb-crd
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300  # 5 minutes max
+  template:
+    metadata:
+      name: wait-for-mongodb-crd
+    spec:
+      serviceAccountName: default
+      restartPolicy: OnFailure
+      containers:
+      - name: wait-for-crd
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Waiting for MongoDBCommunity CRD to be available..."
+          echo "The dependency should install the CRD, but it may take a moment to register..."
+          
+          # The CRD name from MongoDB Community Operator
+          CRD_NAME="mongodbcommunity.mongodbcommunity.mongodb.com"
+          
+          max_attempts=120  # 4 minutes total (120 * 2 seconds)
+          attempt=0
+          
+          while [ $attempt -lt $max_attempts ]; do
+            # Check if CRD is available via API resources (works without CRD get permissions)
+            if kubectl api-resources 2>/dev/null | grep -qi mongodbcommunity; then
+              echo "✓ MongoDBCommunity CRD is registered in API server!"
+              # Verify we can actually use it by checking the API group
+              if kubectl api-resources 2>/dev/null | grep -q "mongodbcommunity.mongodb.com"; then
+                echo "✓ CRD is fully available and ready!"
+                # Wait a bit more to ensure CRD is fully ready
+                sleep 2
+                exit 0
+              else
+                echo "CRD found but API group not ready, waiting..."
+              fi
+            else
+              echo "CRD not found (attempt $((attempt+1))/$max_attempts), waiting..."
+            fi
+            sleep 2
+            attempt=$((attempt+1))
+          done
+          
+          echo "ERROR: MongoDBCommunity CRD not found after $max_attempts attempts ($((max_attempts * 2)) seconds)"
+          echo ""
+          echo "Debugging information:"
+          echo "API resources:"
+          kubectl api-resources 2>/dev/null | grep -i mongo || echo "  No MongoDB API resources found"
+          echo ""
+          echo "Helm releases:"
+          helm list -n default 2>/dev/null | grep -i community || echo "  No community-operator release found"
+          exit 1
+{{- end }}
+
